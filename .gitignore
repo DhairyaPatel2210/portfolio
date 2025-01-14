@@ -1,0 +1,84 @@
+# client ignores
+
+# Logs
+frontend-client/logs
+frontend-client/*.log
+frontend-client/npm-debug.log*
+frontend-client/yarn-debug.log*
+frontend-client/yarn-error.log*
+frontend-client/pnpm-debug.log*
+frontend-client/lerna-debug.log*
+
+frontend-client/node_modules
+frontend-client/dist
+frontend-client/dist-ssr
+frontend-client/*.local
+
+# Editor directories and files
+frontend-client/.vscode/*
+frontend-client/!.vscode/extensions.json
+frontend-client/.idea
+frontend-client/.DS_Store
+frontend-client/*.suo
+frontend-client/*.ntvs*
+frontend-client/*.njsproj
+frontend-client/*.sln
+frontend-client/*.sw?
+
+
+# admin ignores
+
+# Logs
+frontend-admin/logs
+frontend-admin/*.log
+frontend-admin/npm-debug.log*
+frontend-admin/yarn-debug.log*
+frontend-admin/yarn-error.log*
+frontend-admin/pnpm-debug.log*
+frontend-admin/lerna-debug.log*
+
+frontend-admin/node_modules
+frontend-admin/dist
+frontend-admin/dist-ssr
+frontend-admin/*.local
+
+# Editor directories and files
+frontend-admin/.vscode/*
+frontend-admin/!.vscode/extensions.json
+frontend-admin/.idea
+frontend-admin/.DS_Store
+frontend-admin/*.suo
+frontend-admin/*.ntvs*
+frontend-admin/*.njsproj
+frontend-admin/*.sln
+frontend-admin/*.sw?
+
+# backend ignores
+
+# Dependencies
+backend/node_modules/
+backend/npm-debug.log
+backend/yarn-debug.log
+backend/yarn-error.log
+
+# Environment
+backend/.env
+
+# IDE
+backend/.idea/
+backend/.vscode/
+backend/*.swp
+backend/*.swo
+
+# OS
+backend/.DS_Store
+backend/Thumbs.db
+
+# Logs
+backend/logs/
+backend/*.log
+
+# Build
+backend/dist/
+backend/build/
+backend/coverage/
