@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./frontend # Assuming your frontend code is in a directory named 'frontend'
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    environment:
+      - VITE_API_URL=http://backend:8080 # Environment variable for API URL
+
+  backend:
+    build:
+      context: ./backend # Assuming your backend code is in a directory named 'backend'
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=
+      - PORT=
+      - MONGODB_URI=
+      - CORS_ORIGIN=
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX=100
+      - JWT_SECRET=
+      - HASH_SALT=12
+      - AWS_ACCESS_KEY_ID=
+      - AWS_SECRET_ACCESS_KEY=
+      - AWS_REGION=
+      - AWS_BUCKET_NAME=
+    volumes:
+      - ./backend/uploads:/usr/src/app/uploads # For file uploads if needed
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local

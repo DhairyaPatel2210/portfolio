@@ -25,6 +25,9 @@ frontend-client/*.njsproj
 frontend-client/*.sln
 frontend-client/*.sw?
 
+# environment files
+frontend-client/.env
+
 
 # admin ignores
 
@@ -52,6 +55,9 @@ frontend-admin/*.ntvs*
 frontend-admin/*.njsproj
 frontend-admin/*.sln
 frontend-admin/*.sw?
+
+# environment files
+frontend-admin/.env
 
 # backend ignores
 
