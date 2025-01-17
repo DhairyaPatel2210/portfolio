@@ -319,6 +319,13 @@ router.post("/auth/api-key", async (req, res) => {
       expiresIn: "24h",
     });
 
+    // Set token in cookie
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+
     res.json({
       message: "Authentication successful",
       token,

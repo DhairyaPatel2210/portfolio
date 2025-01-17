@@ -37,8 +37,6 @@ services:
       - AWS_SECRET_ACCESS_KEY=
       - AWS_REGION=
       - AWS_BUCKET_NAME=
-    volumes:
-      - ./backend/uploads:/usr/src/app/uploads # For file uploads if needed
 
 networks:
   app-network:

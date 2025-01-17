@@ -55,6 +55,9 @@ app.use("/api/experiences", experienceRoutes);
 const educationRoutes = require("./controllers/educationController");
 app.use("/api/educations", educationRoutes);
 
+const portfolioRoutes = require("./controllers/portfolioController");
+app.use("/portfolio", portfolioRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
