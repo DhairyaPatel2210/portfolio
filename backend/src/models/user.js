@@ -58,6 +58,24 @@ const userSchema = new mongoose.Schema(
         type: [String],
         default: [],
       },
+      image: {
+        s3Key: {
+          type: String,
+          required: true,
+          default: "",
+        },
+        s3Url: {
+          type: String,
+          required: true,
+          default: "",
+        },
+      },
+    },
+    analytics: {
+      googleAnalyticsId: {
+        type: String,
+        default: "",
+      },
     },
     featuredProjects: {
       type: [

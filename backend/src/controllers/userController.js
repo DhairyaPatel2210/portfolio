@@ -8,6 +8,7 @@ const generateHashPassword = require("../utils/bcryptPassword");
 const crypto = require("crypto");
 const Project = require("../models/Projects");
 const Socials = require("../models/Socials");
+const { uploadBase64ToS3, deleteFromS3 } = require("../utils/s3");
 
 // Signup route
 router.post("/signup", async (req, res) => {
@@ -486,7 +487,7 @@ router.get("/seo", authenticateToken, async (req, res) => {
 // Update SEO data
 router.put("/seo", authenticateToken, async (req, res) => {
   try {
-    const { title, description, keywords } = req.body;
+    const { title, description, keywords, image } = req.body;
 
     // Create update object with only provided fields
     const updateData = {};
@@ -499,23 +500,79 @@ router.put("/seo", authenticateToken, async (req, res) => {
       updateData["seo.keywords"] = keywords;
     }
 
-    const user = await User.findByIdAndUpdate(
+    // Handle image update
+    if (image) {
+      const user = await User.findById(req.user.userId);
+
+      // Delete old image if it exists
+      if (user.seo.image && user.seo.image.s3Key) {
+        await deleteFromS3(user.seo.image.s3Key);
+      }
+
+      // Upload new image
+      const s3Response = await uploadBase64ToS3(image, "seo-image");
+      updateData["seo.image.s3Key"] = s3Response.key;
+      updateData["seo.image.s3Url"] = s3Response.url;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
       req.user.userId,
       { $set: updateData },
       { new: true }
     ).select("seo");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      message: "SEO data updated successfully",
+      seo: updatedUser.seo,
+    });
+  } catch (error) {
+    console.error("Error updating SEO data:", error);
+    res.status(500).json({ message: "Error updating SEO data" });
+  }
+});
+
+// Update Google Analytics tracking code
+router.put("/analytics", authenticateToken, async (req, res) => {
+  try {
+    const { googleAnalyticsId } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { "analytics.googleAnalyticsId": googleAnalyticsId },
+      { new: true }
+    ).select("analytics");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     res.json({
-      message: "SEO data updated successfully",
-      seo: user.seo,
+      message: "Analytics settings updated successfully",
+      analytics: user.analytics,
     });
   } catch (error) {
-    console.error("Error updating SEO data:", error);
-    res.status(500).json({ message: "Error updating SEO data" });
+    console.error("Error updating analytics settings:", error);
+    res.status(500).json({ message: "Error updating analytics settings" });
+  }
+});
+
+// Get Google Analytics tracking code
+router.get("/analytics", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select("analytics");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ analytics: user.analytics });
+  } catch (error) {
+    console.error("Error fetching analytics settings:", error);
+    res.status(500).json({ message: "Error fetching analytics settings" });
   }
 });
 

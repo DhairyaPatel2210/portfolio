@@ -18,6 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const ResumeCard = ({
   resume,
@@ -29,91 +37,140 @@ const ResumeCard = ({
 }: {
   resume?: Resume;
   onDelete: () => void;
-  onUpload: (file: File, index: number) => Promise<void>;
+  onUpload: (file: File, displayName: string, index: number) => Promise<void>;
   isLoading: boolean;
   canDelete: boolean;
   index: number;
 }) => {
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const uploadId = resume ? resume._id : `new-${index}`;
 
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setShowUploadDialog(true);
+  };
+
+  const handleUpload = async () => {
+    if (selectedFile && displayName) {
+      await onUpload(selectedFile, displayName, index);
+      setShowUploadDialog(false);
+      setDisplayName("");
+      setSelectedFile(null);
+    }
+  };
+
   return (
-    <Card className="w-full relative">
-      {resume && canDelete && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-2 top-2 hover:bg-destructive hover:text-destructive-foreground"
-          onClick={onDelete}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      )}
-      <CardHeader>
-        <h3 className="text-lg font-semibold">
-          {resume ? resume.fileName : `Upload Resume ${index + 1}`}
-        </h3>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : resume ? (
-          <div className="space-y-4">
-            <iframe
-              src={resume.s3Url}
-              className="w-full h-[400px]"
-              title={resume.fileName}
-            />
-            <input
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              id={`resume-upload-${uploadId}`}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) await onUpload(file, index);
-                e.target.value = ""; // Reset input after upload
-              }}
-            />
-            <Button
-              className="w-full"
-              onClick={() => {
-                document.getElementById(`resume-upload-${uploadId}`)?.click();
-              }}
-            >
-              Update Resume
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center">
-              <Upload className="h-8 w-8 mb-2" />
-              <p>Upload a PDF resume</p>
-            </div>
-            <input
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              id={`resume-upload-${uploadId}`}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) await onUpload(file, index);
-                e.target.value = ""; // Reset input after upload
-              }}
-            />
-            <Button
-              className="w-full"
-              onClick={() => {
-                document.getElementById(`resume-upload-${uploadId}`)?.click();
-              }}
-            >
-              Upload Resume
-            </Button>
-          </div>
+    <>
+      <Card className="w-full relative">
+        {resume && canDelete && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-2 hover:bg-destructive hover:text-destructive-foreground"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         )}
-      </CardContent>
-    </Card>
+        <CardHeader>
+          <h3 className="text-lg font-semibold">
+            {resume ? resume.displayName : `Upload Resume ${index + 1}`}
+          </h3>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : resume ? (
+            <div className="space-y-4">
+              <iframe
+                src={resume.s3Url}
+                className="w-full h-[400px]"
+                title={resume.displayName}
+              />
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                id={`resume-upload-${uploadId}`}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleFileSelect(file);
+                  }
+                  e.target.value = ""; // Reset input after upload
+                }}
+              />
+              <Button
+                className="w-full"
+                onClick={() => {
+                  document.getElementById(`resume-upload-${uploadId}`)?.click();
+                }}
+              >
+                Update Resume
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center">
+                <Upload className="h-8 w-8 mb-2" />
+                <p>Upload a PDF resume</p>
+              </div>
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                id={`resume-upload-${uploadId}`}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleFileSelect(file);
+                  }
+                  e.target.value = ""; // Reset input after upload
+                }}
+              />
+              <Button
+                className="w-full"
+                onClick={() => {
+                  document.getElementById(`resume-upload-${uploadId}`)?.click();
+                }}
+              >
+                Upload Resume
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Resume Display Name</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g., Software Engineer Resume"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleUpload}
+              disabled={!displayName}
+            >
+              Upload
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
@@ -155,7 +212,11 @@ export default function Resumes() {
     fetchResumes();
   }, []);
 
-  const handleUpload = async (file: File, index: number) => {
+  const handleUpload = async (
+    file: File,
+    displayName: string,
+    index: number
+  ) => {
     if (!file.type.includes("pdf")) {
       toast.error("Only PDF files are allowed");
       return;
@@ -191,6 +252,7 @@ export default function Resumes() {
           body: JSON.stringify({
             file: base64Data,
             fileName: file.name,
+            displayName: displayName,
             _id: existingResume._id,
           }),
         });
@@ -204,6 +266,7 @@ export default function Resumes() {
           body: JSON.stringify({
             file: base64Data,
             fileName: file.name,
+            displayName: displayName,
             index: index,
           }),
         });

@@ -6,6 +6,10 @@ const resumeSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    displayName: {
+      type: String,
+      required: true,
+    },
     s3Key: {
       type: String,
       required: true,

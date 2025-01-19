@@ -9,8 +9,12 @@ const authenticateToken = require("../middleware/authorization");
 // Get aggregated portfolio data
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    // Get user data
-    const user = await User.findById(req.user.userId).select("-password");
+    // Get user data with populated featured projects and socials
+    const user = await User.findById(req.user.userId)
+      .select("-password")
+      .populate("featuredProjects")
+      .populate("featuredSocials");
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -31,7 +35,7 @@ router.get("/", authenticateToken, async (req, res) => {
     });
 
     const portfolioData = {
-      name: user.name,
+      name: `${user.firstName} ${user.lastName}`,
       about: user.about,
       status: user.status,
       seo: {
@@ -39,9 +43,15 @@ router.get("/", authenticateToken, async (req, res) => {
         description: user.seo.description,
         keywords: user.seo.keywords,
       },
+      analytics: {
+        googleAnalyticsId: user.analytics?.googleAnalyticsId || "",
+      },
       featuredProjects: user.featuredProjects,
       featuredSocials: user.featuredSocials,
-      resumes: resumes.map((resume) => resume.s3Url),
+      resumes: resumes.map((resume) => ({
+        url: resume.s3Url,
+        displayName: resume.displayName,
+      })),
       education,
       experience,
     };

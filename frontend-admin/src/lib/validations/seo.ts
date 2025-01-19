@@ -18,4 +18,5 @@ export const seoSchema = yup.object().shape({
     .of(yup.string())
     .min(5, "At least 5 keywords are required")
     .required("Keywords are required"),
+  image: yup.string().required("Image is required"),
 });

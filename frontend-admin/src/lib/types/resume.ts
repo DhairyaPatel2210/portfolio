@@ -1,6 +1,7 @@
 export interface Resume {
   _id: string;
   fileName: string;
+  displayName: string;
   s3Url: string;
   createdAt: string;
   updatedAt: string;

@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useFormik } from "formik";
 import { seoSchema } from "@/lib/validations/seo";
-import { SEO } from "@/lib/types/seo";
+import { SEO, SEOResponse } from "@/lib/types/seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +16,14 @@ const initialValues: SEO = {
   title: "",
   description: "",
   keywords: [],
+  image: "",
 };
 
 function SEOPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const [seoData, setSeoData] = useState<SEO | null>(null);
+  const [seoData, setSeoData] = useState<SEOResponse | null>(null);
   const [newKeyword, setNewKeyword] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSEO();
@@ -34,14 +36,19 @@ function SEOPage() {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch SEO data");
-      const data = await response.json();
+      const data: SEOResponse = await response.json();
 
-      setSeoData(data || null);
+      setSeoData(data);
       if (data) {
         formik.setValues({
-          ...data.seo,
+          title: data.seo.title,
+          description: data.seo.description,
           keywords: data.seo.keywords || [],
+          image: "",
         });
+        if (data.seo.image?.s3Url) {
+          setImagePreview(data.seo.image.s3Url);
+        }
       }
     } catch (error) {
       toast.error("Failed to load SEO data");
@@ -50,10 +57,28 @@ function SEOPage() {
     }
   };
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size should be less than 5MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        formik.setFieldValue("image", base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleFormSubmit = async (values: SEO) => {
     try {
       const response = await fetch("/api/users/seo", {
-        method: seoData ? "PUT" : "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(values),
@@ -69,7 +94,12 @@ function SEOPage() {
   };
 
   const formik = useFormik({
-    initialValues: seoData || initialValues,
+    initialValues: {
+      title: seoData?.seo.title || initialValues.title,
+      description: seoData?.seo.description || initialValues.description,
+      keywords: seoData?.seo.keywords || initialValues.keywords,
+      image: "",
+    },
     validationSchema: seoSchema,
     onSubmit: handleFormSubmit,
     enableReinitialize: true,
@@ -182,6 +212,59 @@ function SEOPage() {
                   {formik.errors.keywords as string}
                 </p>
               )}
+            </div>
+
+            <div>
+              <Label htmlFor="image">SEO Image</Label>
+              <div className="mt-2 space-y-4">
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <div
+                  className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-primary"
+                  onClick={() => document.getElementById("image")?.click()}
+                >
+                  {imagePreview ? (
+                    <div className="relative w-full max-w-md">
+                      <img
+                        src={imagePreview}
+                        alt="SEO Preview"
+                        className="w-full h-auto rounded-lg"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImagePreview(null);
+                          formik.setFieldValue("image", "");
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-600">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        PNG, JPG, GIF up to 5MB
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {formik.touched.image && formik.errors.image && (
+                  <p className="text-sm text-red-500">{formik.errors.image}</p>
+                )}
+              </div>
             </div>
 
             <Button type="submit" className="w-full">

@@ -7,18 +7,19 @@ const router = express.Router();
 // Upload single resume
 router.post("/", authenticateToken, async (req, res) => {
   try {
-    const { file, fileName } = req.body;
+    const { file, fileName, displayName } = req.body;
 
-    if (!file || !fileName) {
-      return res
-        .status(400)
-        .json({ message: "File data and filename are required" });
+    if (!file || !fileName || !displayName) {
+      return res.status(400).json({
+        message: "File data, filename, and display name are required",
+      });
     }
 
     const s3Response = await uploadBase64ToS3(file, fileName);
 
     const newResume = new Resume({
       fileName,
+      displayName,
       s3Key: s3Response.key,
       s3Url: s3Response.url,
       user: req.user.userId,
@@ -51,7 +52,7 @@ router.get("/", authenticateToken, async (req, res) => {
 router.put("/:id", authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
-    const { file, fileName } = req.body;
+    const { file, fileName, displayName } = req.body;
 
     const existingResume = await Resume.findOne({
       _id: id,
@@ -66,6 +67,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
     const s3Response = await uploadBase64ToS3(file, fileName);
 
     existingResume.fileName = fileName;
+    existingResume.displayName = displayName;
     existingResume.s3Key = s3Response.key;
     existingResume.s3Url = s3Response.url;
     await existingResume.save();

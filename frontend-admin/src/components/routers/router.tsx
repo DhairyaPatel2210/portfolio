@@ -13,6 +13,7 @@ import Experience from "../dashboard/pages/Experience";
 import Education from "../dashboard/pages/Education";
 import Home from "../dashboard/pages/Home";
 import SEO from "../dashboard/pages/SEO";
+import Analytics from "../dashboard/pages/Analytics";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
           <Route path="experiences" element={<Experience />} />
           <Route path="educations" element={<Education />} />
           <Route path="seo" element={<SEO />} />
+          <Route path="analytics" element={<Analytics />} />
         </Route>
       </Routes>
     </BrowserRouter>

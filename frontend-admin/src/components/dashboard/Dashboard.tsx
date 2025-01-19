@@ -13,6 +13,7 @@ const sidebarItems = [
   { name: "About Me", path: "/dashboard/about" },
   { name: "Socials", path: "/dashboard/socials" },
   { name: "SEO", path: "/dashboard/seo" },
+  { name: "Analytics", path: "/dashboard/analytics" },
 ];
 
 function Dashboard() {
