@@ -1,9 +1,7 @@
-version: "3.8"
-
 services:
   frontend:
     build:
-      context: ./frontend # Assuming your frontend code is in a directory named 'frontend'
+      context: ./frontend-admin # Assuming your frontend code is in a directory named 'frontend'
       dockerfile: Dockerfile
     ports:
       - "80:80"
@@ -20,8 +18,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
-    depends_on:
-      - mongodb
     networks:
       - app-network
     environment:
@@ -41,7 +37,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  mongodb_data:
-    driver: local
