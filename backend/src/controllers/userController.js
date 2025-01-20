@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const Project = require("../models/Projects");
 const Socials = require("../models/Socials");
 const { uploadBase64ToS3, deleteFromS3 } = require("../utils/s3");
+const { generateKeyPair, decryptWithPrivateKey } = require("../utils/crypto");
 
 // Signup route
 router.post("/signup", async (req, res) => {
@@ -302,40 +303,56 @@ router.get("/api-key", authenticateToken, async (req, res) => {
 // Authenticate with API key
 router.post("/auth/api-key", async (req, res) => {
   try {
-    const { email, apiKey } = req.body;
+    const { encryptedKey, email } = req.body;
 
-    if (!email || !apiKey) {
-      return res
-        .status(400)
-        .json({ message: "Email and API key are required" });
+    if (!encryptedKey || !email) {
+      return res.status(400).json({
+        message: "Encrypted API key and email are required",
+      });
     }
 
-    const user = await User.findOne({ email, apiKey });
+    // Find user by email and include apiKey in selection
+    const user = await User.findOne({ email }).select(
+      "+rsaKeys.privateKey +apiKey"
+    );
 
-    if (!user) {
+    if (!user || !user.rsaKeys?.privateKey) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
+    try {
+      // Attempt to decrypt the API key
+      const decryptedApiKey = decryptWithPrivateKey(
+        encryptedKey,
+        user.rsaKeys.privateKey
+      );
 
-    // Set token in cookie
-    res.cookie("jwt", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    });
+      // Compare with stored API key
+      if (decryptedApiKey === user.apiKey) {
+        // Generate JWT token
+        const token = jwt.sign(
+          { userId: user._id, email: user.email },
+          process.env.JWT_SECRET,
+          { expiresIn: "24h" }
+        );
 
-    res.json({
-      message: "Authentication successful",
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-      },
-    });
+        // Set token in cookie
+        res.cookie("jwt", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        });
+
+        return res.json({ message: "Authentication successful" });
+      }
+
+      return res.status(401).json({ message: "Invalid credentials" });
+    } catch (decryptError) {
+      console.error("Decryption error:", decryptError);
+      return res.status(401).json({
+        message: "Failed to decrypt API key",
+      });
+    }
   } catch (error) {
     console.error("Error authenticating with API key:", error);
     res.status(500).json({ message: "Error authenticating with API key" });
@@ -573,6 +590,66 @@ router.get("/analytics", authenticateToken, async (req, res) => {
   } catch (error) {
     console.error("Error fetching analytics settings:", error);
     res.status(500).json({ message: "Error fetching analytics settings" });
+  }
+});
+
+// Generate public key
+router.get("/public-key", authenticateToken, async (req, res) => {
+  try {
+    // Find user with their private key
+    const user = await User.findById(req.user.userId).select(
+      "+rsaKeys.privateKey"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // If user already has keys, return the existing public key
+    if (user.rsaKeys?.publicKey) {
+      return res.json({ publicKey: user.rsaKeys.publicKey });
+    }
+
+    // Generate new keys only if user doesn't have them
+    const { publicKey, privateKey } = generateKeyPair();
+
+    // Store both keys
+    user.rsaKeys = {
+      privateKey,
+      publicKey,
+    };
+    await user.save();
+
+    res.json({ publicKey });
+  } catch (error) {
+    console.error("Error handling public key:", error);
+    res.status(500).json({ message: "Error handling public key" });
+  }
+});
+
+// Regenerate public key (requires confirmation)
+router.post("/public-key", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Generate new key pair
+    const { publicKey, privateKey } = generateKeyPair();
+
+    // Update keys
+    user.rsaKeys = {
+      privateKey,
+      publicKey,
+    };
+    await user.save();
+
+    res.json({ publicKey });
+  } catch (error) {
+    console.error("Error regenerating public key:", error);
+    res.status(500).json({ message: "Error regenerating public key" });
   }
 });
 

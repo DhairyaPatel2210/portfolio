@@ -58,6 +58,9 @@ app.use("/api/educations", educationRoutes);
 const portfolioRoutes = require("./controllers/portfolioController");
 app.use("/portfolio", portfolioRoutes);
 
+const contactRoutes = require("./controllers/contactController");
+app.use("/api/contact", contactRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;

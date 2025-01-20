@@ -23,6 +23,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    contact: {
+      location: {
+        type: String,
+        required: true,
+        default: "",
+      },
+      personalEmail: {
+        type: String,
+        required: true,
+        default: "",
+      },
+      fromEmail: {
+        type: String,
+        required: true,
+        default: "",
+      },
+      sendGridApiKey: {
+        type: String,
+        default: "",
+      },
+    },
     about: {
       type: String,
       default: "",
@@ -104,6 +125,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+      select: false,
+    },
+    rsaKeys: {
+      privateKey: {
+        type: String,
+        select: false,
+      },
+      publicKey: {
+        type: String,
+      },
     },
     createdAt: {
       type: Date,

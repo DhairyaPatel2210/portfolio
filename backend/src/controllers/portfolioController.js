@@ -12,6 +12,11 @@ router.get("/", authenticateToken, async (req, res) => {
     // Get user data with populated featured projects and socials
     const user = await User.findById(req.user.userId)
       .select("-password")
+      .select("-contact.sendGridApiKey")
+      .select("-contact.fromEmail")
+      .select("-contact.personalEmail")
+      .select("-apiKey")
+      .select("-email")
       .populate("featuredProjects")
       .populate("featuredSocials");
 
@@ -42,6 +47,10 @@ router.get("/", authenticateToken, async (req, res) => {
         title: user.seo.title,
         description: user.seo.description,
         keywords: user.seo.keywords,
+        image: {
+          s3Key: user.seo.image.s3Key,
+          s3Url: user.seo.image.s3Url,
+        },
       },
       analytics: {
         googleAnalyticsId: user.analytics?.googleAnalyticsId || "",

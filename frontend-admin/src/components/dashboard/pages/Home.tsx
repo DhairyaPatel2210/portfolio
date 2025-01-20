@@ -13,8 +13,17 @@ import {
 import { Project } from "@/lib/types/project";
 import { Social } from "@/lib/types/social";
 import { Badge } from "@/components/ui/badge";
-import { Check, Copy, Search, X, Save } from "lucide-react";
+import { Check, Copy, Search, X, Save, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+
+interface Contact {
+  location: string;
+  personalEmail: string;
+  fromEmail: string;
+  sendGridApiKey: string;
+}
 
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -29,6 +38,18 @@ export default function Home() {
   const [isSavingSocials, setIsSavingSocials] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [contact, setContact] = useState<Contact>({
+    location: "",
+    personalEmail: "",
+    fromEmail: "",
+    sendGridApiKey: "",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+  const [hasGeneratedKey, setHasGeneratedKey] = useState(false);
+  const [showKeyWarning, setShowKeyWarning] = useState(false);
 
   // Initial data fetch
   useEffect(() => {
@@ -41,6 +62,7 @@ export default function Home() {
           fetchApiKey(),
           fetchFeaturedProjects(),
           fetchFeaturedSocials(),
+          fetchContact(),
         ]);
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -279,8 +301,219 @@ export default function Home() {
     social.name.toLowerCase().includes(socialSearch.toLowerCase())
   );
 
+  const fetchContact = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/contact", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.contact) {
+        setContact({
+          location: data.contact.location || "",
+          personalEmail: data.contact.personalEmail || "",
+          fromEmail: data.contact.fromEmail || "",
+          sendGridApiKey: data.contact.sendGridApiKey || "",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch contact information",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ contact }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.contact) {
+        setContact({
+          location: data.contact.location || "",
+          personalEmail: data.contact.personalEmail || "",
+          fromEmail: data.contact.fromEmail || "",
+          sendGridApiKey: data.contact.sendGridApiKey || "",
+        });
+      }
+
+      toast({
+        title: "Success",
+        description: "Contact information saved successfully",
+      });
+    } catch (error) {
+      console.error("Error saving contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save contact information",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const generatePublicKey = async () => {
+    if (publicKey && !showKeyWarning) {
+      setShowKeyWarning(true);
+      toast({
+        title: "Warning",
+        description:
+          "Generating a new key will invalidate the old one. Make sure you want to do this.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsGeneratingKey(true);
+      const response = await fetch("/api/users/public-key", {
+        method: publicKey ? "POST" : "GET", // POST for regeneration, GET for first time
+        credentials: "include",
+      });
+      const data = await response.json();
+      setPublicKey(data.publicKey);
+      setHasGeneratedKey(true);
+      setShowKeyWarning(false);
+      toast({
+        title: "Important!",
+        description:
+          "Please copy and securely store this public key. You'll need it for API authentication.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate public key",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
+  const copyPublicKey = () => {
+    if (publicKey) {
+      navigator.clipboard.writeText(publicKey);
+      toast({
+        title: "Success",
+        description: "Public key copied to clipboard",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8 p-6">
+      <h2 className="text-2xl font-bold">Contact Information</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Contact Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                placeholder="e.g., New York, USA"
+                value={contact.location}
+                onChange={(e) =>
+                  setContact({ ...contact, location: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="personalEmail">Personal Email</Label>
+              <Input
+                id="personalEmail"
+                type="email"
+                placeholder="your@email.com"
+                value={contact.personalEmail}
+                onChange={(e) =>
+                  setContact({ ...contact, personalEmail: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fromEmail">From Email (for sending emails)</Label>
+              <Input
+                id="fromEmail"
+                type="email"
+                placeholder="noreply@yourdomain.com"
+                value={contact.fromEmail}
+                onChange={(e) =>
+                  setContact({ ...contact, fromEmail: e.target.value })
+                }
+                required
+              />
+              <p className="text-sm text-gray-500">
+                This email will be used as the sender address when visitors send
+                you messages
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sendGridApiKey">SendGrid API Key</Label>
+              <Input
+                id="sendGridApiKey"
+                type="password"
+                placeholder="Enter your SendGrid API key"
+                value={contact.sendGridApiKey}
+                onChange={(e) =>
+                  setContact({ ...contact, sendGridApiKey: e.target.value })
+                }
+              />
+              <p className="text-sm text-gray-500">
+                Required to send emails. Get your API key from SendGrid
+                dashboard
+              </p>
+            </div>
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[200px]">
           <div className="text-muted-foreground">Loading...</div>
@@ -498,6 +731,72 @@ export default function Home() {
               ) : (
                 <Button onClick={generateApiKey}>Generate API Key</Button>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Public Key Generation Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Public Key Management</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Public Key for API Key Encryption</Label>
+                {publicKey ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={publicKey}
+                        readOnly
+                        className="font-mono text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={copyPublicKey}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {hasGeneratedKey && (
+                      <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium mt-2">
+                        ⚠️ Important: Copy and store this public key securely.
+                        You'll need it for API authentication.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Generate a public key to enable API key encryption. Store it
+                    securely as you'll need it for authentication.
+                  </p>
+                )}
+                <Button
+                  onClick={generatePublicKey}
+                  disabled={isGeneratingKey}
+                  variant={showKeyWarning ? "destructive" : "default"}
+                  className="mt-2"
+                >
+                  {isGeneratingKey ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : showKeyWarning ? (
+                    "Confirm New Key Generation"
+                  ) : publicKey ? (
+                    "Generate New Key"
+                  ) : (
+                    "Generate Public Key"
+                  )}
+                </Button>
+                {showKeyWarning && (
+                  <p className="text-sm text-red-500 mt-2">
+                    Warning: Generating a new key will invalidate your old one.
+                    All systems using the old key will need to be updated.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </>
