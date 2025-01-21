@@ -10,9 +10,10 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
     proxy: {
       "/api": {
-        target: process.env.VITE_BACKEND_API || "http://localhost:8080",
+        target: process.env.VITE_BACKEND_API || "http://backend:8080",
         changeOrigin: true,
         secure: false,
       },

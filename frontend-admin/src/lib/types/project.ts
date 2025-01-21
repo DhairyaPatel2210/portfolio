@@ -1,4 +1,4 @@
-export type ProjectType = "front-end" | "back-end" | "full-stack" | "devops";
+export type ProjectType = string;
 
 export interface Project {
   _id?: string;

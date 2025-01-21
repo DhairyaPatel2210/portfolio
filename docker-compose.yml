@@ -4,13 +4,13 @@ services:
       context: ./frontend-admin # Assuming your frontend code is in a directory named 'frontend'
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "5173:5173"
     depends_on:
       - backend
     networks:
       - app-network
     environment:
-      - VITE_API_URL=http://backend:8080 # Environment variable for API URL
+      - VITE_API_URL=/api # Environment variable for API URL
 
   backend:
     build:

@@ -24,6 +24,7 @@ function SEOPage() {
   const [seoData, setSeoData] = useState<SEOResponse | null>(null);
   const [newKeyword, setNewKeyword] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSEO();
@@ -48,6 +49,7 @@ function SEOPage() {
         });
         if (data.seo.image?.s3Url) {
           setImagePreview(data.seo.image.s3Url);
+          setExistingImageUrl(data.seo.image.s3Url);
         }
       }
     } catch (error) {
@@ -70,6 +72,7 @@ function SEOPage() {
         const base64String = reader.result as string;
         setImagePreview(base64String);
         formik.setFieldValue("image", base64String);
+        setExistingImageUrl(null); // Clear existing image URL when new image is selected
       };
       reader.readAsDataURL(file);
     }
@@ -77,20 +80,52 @@ function SEOPage() {
 
   const handleFormSubmit = async (values: SEO) => {
     try {
+      const payload: Partial<SEO> = {
+        title: values.title,
+        description: values.description,
+        keywords: values.keywords,
+      };
+
+      console.log(values.image, existingImageUrl);
+
+      // Only include image if there's a new image or we're explicitly removing it
+      if (values.image || !existingImageUrl) {
+        payload.image = values.image;
+      }
+
       const response = await fetch("/api/users/seo", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error("Failed to save SEO data");
       const savedData = await response.json();
       setSeoData(savedData);
+
+      // Update image states after successful save
+      if (savedData.seo.image?.s3Url) {
+        setExistingImageUrl(savedData.seo.image.s3Url);
+        setImagePreview(savedData.seo.image.s3Url);
+        formik.setFieldValue("image", "");
+      } else {
+        setExistingImageUrl(null);
+        setImagePreview(null);
+        formik.setFieldValue("image", "");
+      }
+
       toast.success("SEO data saved successfully");
     } catch (error) {
       toast.error("Failed to save SEO data");
     }
+  };
+
+  const removeImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImagePreview(null);
+    setExistingImageUrl(null);
+    formik.setFieldValue("image", "");
   };
 
   const formik = useFormik({
@@ -228,10 +263,10 @@ function SEOPage() {
                   className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-primary"
                   onClick={() => document.getElementById("image")?.click()}
                 >
-                  {imagePreview ? (
+                  {imagePreview || existingImageUrl ? (
                     <div className="relative w-full max-w-md">
                       <img
-                        src={imagePreview}
+                        src={imagePreview || existingImageUrl || ""}
                         alt="SEO Preview"
                         className="w-full h-auto rounded-lg"
                       />
@@ -240,11 +275,7 @@ function SEOPage() {
                         variant="secondary"
                         size="sm"
                         className="absolute top-2 right-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setImagePreview(null);
-                          formik.setFieldValue("image", "");
-                        }}
+                        onClick={removeImage}
                       >
                         <X className="h-4 w-4" />
                       </Button>

@@ -88,3 +88,5 @@ backend/*.log
 backend/dist/
 backend/build/
 backend/coverage/
+
+docker-compose-dev.yml

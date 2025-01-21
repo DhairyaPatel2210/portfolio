@@ -6,5 +6,5 @@ export const socialSchema = yup.object().shape({
     .string()
     .url("Please enter a valid URL")
     .required("Link is required"),
-  icon: yup.string().required("Icon is required"),
+  icon: yup.string(),
 });

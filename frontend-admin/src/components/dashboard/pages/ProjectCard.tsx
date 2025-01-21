@@ -3,10 +3,17 @@ import { Project, ProjectType } from "@/lib/types/project";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { X, Calendar as CalendarIcon } from "lucide-react";
-import MDEditor from "@uiw/react-markdown-editor";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { X, Calendar as CalendarIcon } from "lucide-react";
+import MDEditor from "@uiw/react-md-editor";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -16,6 +23,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import rehypeSanitize from "rehype-sanitize";
 
 interface ProjectCardProps {
   project?: Project;
@@ -25,13 +33,6 @@ interface ProjectCardProps {
   onCancel?: () => void;
 }
 
-const PROJECT_TYPES: ProjectType[] = [
-  "front-end",
-  "back-end",
-  "full-stack",
-  "devops",
-];
-
 function ProjectCard({
   project,
   isNew,
@@ -39,6 +40,7 @@ function ProjectCard({
   onDelete,
   onCancel,
 }: ProjectCardProps) {
+  const { toast } = useToast();
   const initialFormData: Project = {
     title: "",
     description: "",
@@ -56,6 +58,7 @@ function ProjectCard({
   const [formData, setFormData] = useState<Project>(project || initialFormData);
 
   const [newLanguage, setNewLanguage] = useState("");
+  const [newProjectType, setNewProjectType] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,7 +81,7 @@ function ProjectCard({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        setFormData({ ...formData, iconImage: base64String });
+        setFormData((prev) => ({ ...prev, iconImage: base64String }));
         setImagePreview(base64String);
       };
       reader.readAsDataURL(file);
@@ -86,7 +89,7 @@ function ProjectCard({
   };
 
   const removeImage = () => {
-    setFormData({ ...formData, iconImage: "" });
+    setFormData((prev) => ({ ...prev, iconImage: "" }));
     setImagePreview(null);
   };
 
@@ -109,13 +112,35 @@ function ProjectCard({
     });
   };
 
-  const toggleProjectType = (type: ProjectType) => {
-    setFormData((prev) => ({
-      ...prev,
-      projectType: prev.projectType?.includes(type)
-        ? prev.projectType.filter((t) => t !== type)
-        : [...(prev.projectType || []), type],
-    }));
+  const addProjectType = () => {
+    const type = newProjectType.trim();
+    if (type && !formData.projectType.includes(type)) {
+      setFormData((prev) => ({
+        ...prev,
+        projectType: [...prev.projectType, type],
+      }));
+      setNewProjectType("");
+      toast({
+        title: "Success",
+        description: `Added project type: ${type}`,
+      });
+    } else if (formData.projectType.includes(type)) {
+      toast({
+        title: "Error",
+        description: "This project type already exists",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeProjectType = (type: string) => {
+    setFormData({
+      ...formData,
+      projectType: formData.projectType.filter((t) => t !== type),
+    });
+    toast({
+      description: `Removed project type: ${type}`,
+    });
   };
 
   return (
@@ -174,24 +199,38 @@ function ProjectCard({
             </div>
 
             <div className="space-y-2">
-              <Label>Project Type* (Select all that apply)</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {PROJECT_TYPES.map((type) => (
-                  <div key={type} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={type}
-                      checked={formData.projectType?.includes(type) || false}
-                      onCheckedChange={() => toggleProjectType(type)}
+              <Label>Project Type*</Label>
+              <div className="flex gap-2 flex-wrap mb-2">
+                {formData.projectType.map((type) => (
+                  <Badge
+                    key={type}
+                    variant="secondary"
+                    className="flex gap-1 items-center"
+                  >
+                    {type}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => removeProjectType(type)}
                     />
-                    <Label htmlFor={type} className="capitalize">
-                      {type.replace("-", " ")}
-                    </Label>
-                  </div>
+                  </Badge>
                 ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newProjectType}
+                  onChange={(e) => setNewProjectType(e.target.value)}
+                  placeholder="Type and press Enter"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addProjectType();
+                    }
+                  }}
+                />
               </div>
               {(!formData.projectType || formData.projectType.length === 0) && (
                 <p className="text-sm text-red-500">
-                  Please select at least one project type
+                  Please add at least one project type
                 </p>
               )}
             </div>
@@ -199,12 +238,28 @@ function ProjectCard({
 
           <div className="space-y-2">
             <Label>Description*</Label>
-            <MDEditor
-              value={formData.description}
-              onChange={(value) =>
-                setFormData({ ...formData, description: value || "" })
-              }
-            />
+            <div data-color-mode="light" className="markdown-editor">
+              <MDEditor
+                value={formData.description}
+                onChange={(value) =>
+                  setFormData({ ...formData, description: value || "" })
+                }
+                preview="edit"
+                height={200}
+                previewOptions={{
+                  rehypePlugins: [rehypeSanitize],
+                  components: {
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-4 my-2">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal pl-4 my-2">{children}</ol>
+                    ),
+                    li: ({ children }) => <li className="my-1">{children}</li>,
+                  },
+                }}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -268,12 +323,28 @@ function ProjectCard({
           {/* Special Note */}
           <div className="space-y-2">
             <Label>Special Note</Label>
-            <MDEditor
-              value={formData.specialNote}
-              onChange={(value) =>
-                setFormData({ ...formData, specialNote: value || "" })
-              }
-            />
+            <div data-color-mode="light" className="markdown-editor">
+              <MDEditor
+                value={formData.specialNote}
+                onChange={(value) =>
+                  setFormData({ ...formData, specialNote: value || "" })
+                }
+                preview="edit"
+                height={150}
+                previewOptions={{
+                  rehypePlugins: [rehypeSanitize],
+                  components: {
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-4 my-2">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal pl-4 my-2">{children}</ol>
+                    ),
+                    li: ({ children }) => <li className="my-1">{children}</li>,
+                  },
+                }}
+              />
+            </div>
           </div>
 
           {/* Dates and Currently Working */}

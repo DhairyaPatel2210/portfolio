@@ -37,7 +37,7 @@ router.post("/", authenticateToken, async (req, res) => {
       !major ||
       !degree ||
       !startDate ||
-      !endDate ||
+      (!isPursuing && !endDate) || // Only require endDate if not pursuing
       !relatedCourseworks ||
       gpa === undefined ||
       isPursuing === undefined
@@ -51,7 +51,7 @@ router.post("/", authenticateToken, async (req, res) => {
       major,
       degree,
       startDate,
-      endDate,
+      endDate: isPursuing ? null : endDate, // Set endDate to null if pursuing
       relatedCourseworks,
       gpa,
       isPursuing,
@@ -90,7 +90,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
       !major ||
       !degree ||
       !startDate ||
-      !endDate ||
+      (!isPursuing && !endDate) || // Only require endDate if not pursuing
       !relatedCourseworks ||
       gpa === undefined ||
       isPursuing === undefined
@@ -106,7 +106,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
         major,
         degree,
         startDate,
-        endDate,
+        endDate: isPursuing ? null : endDate, // Set endDate to null if pursuing
         relatedCourseworks,
         gpa,
         isPursuing,

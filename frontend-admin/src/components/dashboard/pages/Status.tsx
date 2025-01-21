@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import rehypeSanitize from "rehype-sanitize";
 
 const Status = () => {
   const [value, setValue] = useState<string | undefined>("");
@@ -52,12 +53,24 @@ const Status = () => {
             {loading ? "Saving..." : "Save"}
           </Button>
         </div>
-        <div data-color-mode="light">
+        <div data-color-mode="light" className="markdown-editor">
           <MDEditor
             value={value}
             onChange={setValue}
             preview="edit"
             height={500}
+            previewOptions={{
+              rehypePlugins: [rehypeSanitize],
+              components: {
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-4 my-2">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-4 my-2">{children}</ol>
+                ),
+                li: ({ children }) => <li className="my-1">{children}</li>,
+              },
+            }}
           />
         </div>
       </div>

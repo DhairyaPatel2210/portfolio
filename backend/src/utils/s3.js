@@ -37,7 +37,9 @@ const uploadBase64ToS3 = async (base64Data, fileName) => {
     // Convert base64 to buffer
     const buffer = Buffer.from(base64Content, "base64");
 
-    const key = `projects/${Date.now()}_${fileName}`;
+    // Replace spaces with underscores in the filename
+    const sanitizedFileName = fileName.replace(/\s+/g, "_");
+    const key = `projects/${Date.now()}_${sanitizedFileName}`;
 
     console.log(fileName, contentType);
 

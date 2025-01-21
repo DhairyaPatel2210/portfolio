@@ -30,6 +30,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import rehypeSanitize from "rehype-sanitize";
 
 function ExperiencePage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -163,7 +164,7 @@ function ExperiencePage() {
         <Label htmlFor={isNew ? "role" : `role-${exp?._id}`}>Role</Label>
         <Input
           id={isNew ? "role" : `role-${exp?._id}`}
-          {...formik.getFieldProps(isNew ? "role" : `role-${exp?._id}`)}
+          {...formik.getFieldProps("role")}
           className={cn(
             formik.touched.role && formik.errors.role && "border-red-500"
           )}
@@ -179,7 +180,7 @@ function ExperiencePage() {
         </Label>
         <Input
           id={isNew ? "company" : `company-${exp?._id}`}
-          {...formik.getFieldProps(isNew ? "company" : `company-${exp?._id}`)}
+          {...formik.getFieldProps("company")}
           className={cn(
             formik.touched.company && formik.errors.company && "border-red-500"
           )}
@@ -300,7 +301,7 @@ function ExperiencePage() {
 
       <div>
         <Label>Responsibilities</Label>
-        <div data-color-mode="light">
+        <div data-color-mode="light" className="markdown-editor">
           <MDEditor
             value={formik.values.responsibilities}
             onChange={(value) =>
@@ -308,6 +309,18 @@ function ExperiencePage() {
             }
             preview="edit"
             height={200}
+            previewOptions={{
+              rehypePlugins: [rehypeSanitize],
+              components: {
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-4 my-2">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-4 my-2">{children}</ol>
+                ),
+                li: ({ children }) => <li className="my-1">{children}</li>,
+              },
+            }}
           />
         </div>
         {formik.touched.responsibilities && formik.errors.responsibilities && (
@@ -433,8 +446,23 @@ function ExperiencePage() {
                   </div>
                   <div>
                     <Label>Responsibilities</Label>
-                    <div className="mt-2">
-                      <MDEditor.Markdown source={exp.responsibilities} />
+                    <div className="mt-2 markdown-preview">
+                      <MDEditor.Markdown
+                        source={exp.responsibilities}
+                        components={{
+                          ul: ({ children }) => (
+                            <ul className="list-disc pl-4 my-2">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal pl-4 my-2">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="my-1">{children}</li>
+                          ),
+                        }}
+                      />
                     </div>
                   </div>
                   <div>

@@ -20,7 +20,9 @@ const educationSchema = new mongoose.Schema(
     },
     endDate: {
       type: Date,
-      required: true,
+      required: function () {
+        return !this.isPursuing;
+      },
     },
     relatedCourseworks: {
       type: [String],
