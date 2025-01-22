@@ -18,7 +18,7 @@ connectDB();
 
 const allowedOrigins =
   process.env.NODE_ENV === "production"
-    ? ["https://dhairya.shareitineary.live/", "https://shareitineary.live/"]
+    ? ["https://dhairya.shareitineary.live", "https://shareitineary.live"]
     : ["http://localhost:5173"];
 
 // Middleware
@@ -61,7 +61,7 @@ const educationRoutes = require("./controllers/educationController");
 app.use("/api/educations", educationRoutes);
 
 const portfolioRoutes = require("./controllers/portfolioController");
-app.use("/portfolio", portfolioRoutes);
+app.use("/api/portfolio", portfolioRoutes);
 
 const contactRoutes = require("./controllers/contactController");
 app.use("/api/contact", contactRoutes);
