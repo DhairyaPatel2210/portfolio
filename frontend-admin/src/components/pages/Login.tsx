@@ -36,7 +36,7 @@ function Login() {
     };
 
     checkAuth();
-  }, [navigate, toast]);
+  }, []);
 
   const formik = useFormik({
     initialValues: {

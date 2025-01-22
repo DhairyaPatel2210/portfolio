@@ -287,10 +287,8 @@ router.get("/api-key", authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("apiKey");
 
-    console.log(user);
-
     if (!user.apiKey) {
-      return res.status(404).json({ message: "No API key found" });
+      return res.status(204).json({ message: "No API key found" });
     }
 
     res.json({ apiKey: user.apiKey });
