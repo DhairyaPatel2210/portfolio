@@ -11,6 +11,7 @@ export default defineConfig({
   },
   server: {
     host: true,
+    allowedHosts: ["shareitineary.live", "www.shareitineary.live"],
     proxy: {
       "/api": {
         target: process.env.VITE_BACKEND_API || "http://backend:8080",
