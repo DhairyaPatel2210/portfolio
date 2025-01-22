@@ -26,17 +26,14 @@ const userSchema = new mongoose.Schema(
     contact: {
       location: {
         type: String,
-        required: true,
         default: "",
       },
       personalEmail: {
         type: String,
-        required: true,
         default: "",
       },
       fromEmail: {
         type: String,
-        required: true,
         default: "",
       },
       sendGridApiKey: {
@@ -82,12 +79,10 @@ const userSchema = new mongoose.Schema(
       image: {
         s3Key: {
           type: String,
-          required: true,
           default: "",
         },
         s3Url: {
           type: String,
-          required: true,
           default: "",
         },
       },
