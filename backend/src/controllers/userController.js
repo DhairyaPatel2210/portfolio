@@ -43,10 +43,16 @@ router.post("/signup", async (req, res) => {
       { expiresIn: "24h" }
     );
 
+    const origin = req.get("origin") || req.get("referer") || "";
+    const domain = new URL(origin).hostname;
+
     // Set token in cookie
     res.cookie("jwt", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      domain: domain, // Uses the requesting domain
+      path: "/",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
@@ -79,9 +85,7 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const hashedPassword = await generateHashPassword(password);
-
-    console.log(hashedPassword, user.password);
+    console.log(req.hostname);
 
     // Compare passwords
     const validPassword = await bcrypt.compare(password, user.password);
@@ -96,10 +100,16 @@ router.post("/login", async (req, res) => {
       { expiresIn: "24h" }
     );
 
+    const origin = req.get("origin") || req.get("referer") || "";
+    const domain = new URL(origin).hostname;
+
     // Set token in cookie
     res.cookie("jwt", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      domain: domain, // Uses the requesting domain
+      path: "/",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
@@ -120,7 +130,13 @@ router.get("/check-auth", authenticateToken, (req, res) => {
 
 // Logout route
 router.post("/logout", (req, res) => {
-  res.clearCookie("jwt");
+  const origin = req.get("origin") || req.get("referer") || "";
+  const domain = new URL(origin).hostname;
+
+  res.clearCookie("jwt", {
+    domain: domain,
+    path: "/",
+  });
   res.json({ message: "Logout successful" });
 });
 
@@ -302,6 +318,8 @@ router.get("/api-key", authenticateToken, async (req, res) => {
 router.post("/auth/api-key", async (req, res) => {
   try {
     const { encryptedKey, email } = req.body;
+    const origin = req.get("origin") || req.get("referer") || "";
+    const domain = new URL(origin).hostname;
 
     if (!encryptedKey || !email) {
       return res.status(400).json({
@@ -338,6 +356,9 @@ router.post("/auth/api-key", async (req, res) => {
         res.cookie("jwt", token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+          domain: domain,
+          path: "/",
           maxAge: 24 * 60 * 60 * 1000, // 24 hours
         });
 
