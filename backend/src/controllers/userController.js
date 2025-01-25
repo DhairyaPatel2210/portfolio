@@ -77,15 +77,12 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log(email, password);
     // Find user by email
     const user = await User.findOne({ email: email });
     if (!user) {
       console.log("User not found");
       return res.status(401).json({ message: "Invalid email or password" });
     }
-
-    console.log(req.hostname);
 
     // Compare passwords
     const validPassword = await bcrypt.compare(password, user.password);
@@ -102,6 +99,8 @@ router.post("/login", async (req, res) => {
 
     const origin = req.get("origin") || req.get("referer") || "";
     const domain = new URL(origin).hostname;
+
+    console.log(domain);
 
     // Set token in cookie
     res.cookie("jwt", token, {
@@ -351,6 +350,7 @@ router.post("/auth/api-key", async (req, res) => {
           process.env.JWT_SECRET,
           { expiresIn: "24h" }
         );
+        console.log(domain);
 
         // Set token in cookie
         res.cookie("jwt", token, {
