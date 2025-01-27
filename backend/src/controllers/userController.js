@@ -43,17 +43,11 @@ router.post("/signup", async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    const origin = req.get("origin") || req.get("referer") || "";
-    const domain = new URL(origin).hostname;
-
     // Set token in cookie
     res.cookie("jwt", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      domain: domain, // Uses the requesting domain
-      path: "/",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     // Return success without sending password
@@ -97,19 +91,11 @@ router.post("/login", async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    const origin = req.get("origin") || req.get("referer") || "";
-    const domain = new URL(origin).hostname;
-
-    console.log(domain);
-
     // Set token in cookie
     res.cookie("jwt", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      domain: domain, // Uses the requesting domain
-      path: "/",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     res.json({ message: "Login successful" });
@@ -133,7 +119,6 @@ router.post("/logout", (req, res) => {
   const domain = new URL(origin).hostname;
 
   res.clearCookie("jwt", {
-    domain: domain,
     path: "/",
   });
   res.json({ message: "Logout successful" });
@@ -317,8 +302,6 @@ router.get("/api-key", authenticateToken, async (req, res) => {
 router.post("/auth/api-key", async (req, res) => {
   try {
     const { encryptedKey, email } = req.body;
-    const origin = req.get("origin") || req.get("referer") || "";
-    const domain = new URL(origin).hostname;
 
     if (!encryptedKey || !email) {
       return res.status(400).json({
@@ -350,16 +333,12 @@ router.post("/auth/api-key", async (req, res) => {
           process.env.JWT_SECRET,
           { expiresIn: "24h" }
         );
-        console.log(domain);
 
         // Set token in cookie
         res.cookie("jwt", token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          domain: domain,
-          path: "/",
-          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
 
         return res.json({ message: "Authentication successful" });
