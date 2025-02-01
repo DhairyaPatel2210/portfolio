@@ -29,6 +29,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import api from "@/lib/axios";
 
 function EducationPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -46,14 +47,10 @@ function EducationPage() {
   const fetchEducations = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/educations", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch educations");
-      const data = await response.json();
+      const { data } = await api.get("/educations");
       setEducations(data || []);
-    } catch (error) {
-      toast.error("Failed to load educations");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to load educations");
     } finally {
       setIsLoading(false);
     }
@@ -61,16 +58,13 @@ function EducationPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/educations/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to delete education");
-
+      await api.delete(`/educations/${id}`);
       setEducations(educations.filter((edu) => edu._id !== id));
       toast.success("Education deleted successfully");
-    } catch (error) {
-      toast.error("Failed to delete education");
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to delete education"
+      );
     }
     setDeleteId(null);
   };
@@ -89,19 +83,12 @@ function EducationPage() {
   const handleFormSubmit = async (values: Education, { resetForm }: any) => {
     try {
       const isNew = !values._id;
-      const response = await fetch(
-        isNew ? "/api/educations" : `/api/educations/${values._id}`,
-        {
-          method: isNew ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(values),
-        }
+      const { data } = await api[isNew ? "post" : "put"](
+        isNew ? "/educations" : `/educations/${values._id}`,
+        values
       );
 
-      if (!response.ok) throw new Error("Failed to save education");
-      const savedEducation = await response.json();
-      const educationData = savedEducation.education || savedEducation;
+      const educationData = data.education || data;
 
       if (isNew) {
         setEducations([educationData, ...educations]);
@@ -116,8 +103,8 @@ function EducationPage() {
       setEditingEducation(null);
       resetForm();
       toast.success("Education saved successfully");
-    } catch (error) {
-      toast.error("Failed to save education");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to save education");
     }
   };
 

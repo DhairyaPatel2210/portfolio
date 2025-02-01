@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { toast } from "sonner";
+import api from "@/lib/axios";
 
 interface Interests {
   businessDomain: string[];
@@ -31,11 +32,7 @@ function Interests() {
 
   const fetchInterests = async () => {
     try {
-      const response = await fetch("/api/users/interests", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch interests");
-      const data = await response.json();
+      const { data } = await api.get("/users/interests");
       setInterests(data.interests);
     } catch (error) {
       toast.error("Failed to load interests");
@@ -44,19 +41,11 @@ function Interests() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch("/api/users/interests", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          businessDomain: interests.businessDomain,
-          programmingLanguage: interests.programmingLanguage,
-          framework: interests.framework,
-        }),
+      await api.put("/users/interests", {
+        businessDomain: interests.businessDomain,
+        programmingLanguage: interests.programmingLanguage,
+        framework: interests.framework,
       });
-
-      if (!response.ok) throw new Error("Failed to update interests");
-      const data = await response.json();
       toast.success("Interests updated successfully");
     } catch (error) {
       toast.error("Failed to update interests");

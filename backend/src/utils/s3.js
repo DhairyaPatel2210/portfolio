@@ -21,15 +21,20 @@ const uploadBase64ToS3 = async (base64Data, fileName) => {
       contentType = contentTypeMatch[1];
     }
 
-    // Remove the data:image/png;base64 prefix if present
+    // Remove the data prefix based on content type
     let base64Content = "";
     if (contentType === "application/pdf") {
       base64Content = base64Data.replace(/^data:application\/pdf;base64,/, "");
       const removeExtension = (filename) => {
         return filename.replace(/\.pdf$/i, "");
       };
-
       fileName = removeExtension(fileName);
+    } else if (contentType === "image/svg+xml") {
+      base64Content = base64Data.replace(/^data:image\/svg\+xml;base64,/, "");
+      // Ensure .svg extension for SVG files
+      if (!fileName.toLowerCase().endsWith(".svg")) {
+        fileName = `${fileName}.svg`;
+      }
     } else {
       base64Content = base64Data.replace(/^data:image\/\w+;base64,/, "");
     }

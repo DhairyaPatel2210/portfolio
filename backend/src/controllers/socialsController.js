@@ -18,16 +18,27 @@ const getAllSocials = async (req, res) => {
 // Create a new social
 const createSocial = async (req, res) => {
   try {
-    const { name, link, icon } = req.body;
+    const { name, link, lightIcon, darkIcon } = req.body;
 
-    // Upload image to S3
-    const response = await uploadBase64ToS3(icon, name);
+    // Upload light theme icon to S3
+    const lightIconResponse = await uploadBase64ToS3(
+      lightIcon,
+      `${name}-light`
+    );
+    // Upload dark theme icon to S3
+    const darkIconResponse = await uploadBase64ToS3(darkIcon, `${name}-dark`);
 
     const social = new Socials({
       name: name,
       link: link,
-      s3Link: response.url,
-      s3Key: response.key,
+      lightIcon: {
+        s3Link: lightIconResponse.url,
+        s3Key: lightIconResponse.key,
+      },
+      darkIcon: {
+        s3Link: darkIconResponse.url,
+        s3Key: darkIconResponse.key,
+      },
       user: req.user.userId,
     });
 
@@ -42,19 +53,34 @@ const createSocial = async (req, res) => {
 const updateSocial = async (req, res) => {
   try {
     const id = req.params.id;
-    const { name, link, icon } = req.body;
+    const { name, link, lightIcon, darkIcon } = req.body;
 
     const social = await Socials.findOne({ _id: id, user: req.user.userId });
     if (!social) {
       return res.status(404).json({ message: "Social not found" });
     }
 
-    // If new image is provided, delete old one and upload new one
-    if (icon) {
-      await deleteFromS3(social.s3Key);
-      const response = await uploadBase64ToS3(icon, name);
-      social.s3Link = response.url;
-      social.s3Key = response.key;
+    // If new light icon is provided, delete old one and upload new one
+    if (lightIcon) {
+      await deleteFromS3(social.lightIcon.s3Key);
+      const lightIconResponse = await uploadBase64ToS3(
+        lightIcon,
+        `${name}-light`
+      );
+      social.lightIcon = {
+        s3Link: lightIconResponse.url,
+        s3Key: lightIconResponse.key,
+      };
+    }
+
+    // If new dark icon is provided, delete old one and upload new one
+    if (darkIcon) {
+      await deleteFromS3(social.darkIcon.s3Key);
+      const darkIconResponse = await uploadBase64ToS3(darkIcon, `${name}-dark`);
+      social.darkIcon = {
+        s3Link: darkIconResponse.url,
+        s3Key: darkIconResponse.key,
+      };
     }
 
     social.name = name || social.name;
@@ -87,8 +113,9 @@ const deleteSocial = async (req, res) => {
       });
     }
 
-    // Delete image from S3
-    await deleteFromS3(social.s3Key);
+    // Delete both icons from S3
+    await deleteFromS3(social.lightIcon.s3Key);
+    await deleteFromS3(social.darkIcon.s3Key);
 
     // Delete social from database
     await social.deleteOne();

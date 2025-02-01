@@ -10,13 +10,25 @@ const socialsSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    s3Link: {
-      type: String,
-      required: true,
+    lightIcon: {
+      s3Link: {
+        type: String,
+        required: true,
+      },
+      s3Key: {
+        type: String,
+        required: true,
+      },
     },
-    s3Key: {
-      type: String,
-      required: true,
+    darkIcon: {
+      s3Link: {
+        type: String,
+        required: true,
+      },
+      s3Key: {
+        type: String,
+        required: true,
+      },
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,

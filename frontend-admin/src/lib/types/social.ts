@@ -1,9 +1,14 @@
+export interface IconData {
+  s3Link: string;
+  s3Key: string;
+}
+
 export interface Social {
   _id?: string;
   name: string;
   link: string;
-  icon: string;
-  s3Link?: string;
+  lightIcon: IconData;
+  darkIcon: IconData;
 }
 
 export type CreateSocialInput = Omit<Social, "_id">;

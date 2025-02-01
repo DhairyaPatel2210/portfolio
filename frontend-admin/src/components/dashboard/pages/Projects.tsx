@@ -13,6 +13,7 @@ import { Project } from "@/lib/types/project";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import ProjectCard from "./ProjectCard";
+import api from "@/lib/axios";
 
 function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -25,33 +26,20 @@ function Projects() {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch("/api/projects", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch projects");
-      const data = await response.json();
-      console.log(data);
+      const { data } = await api.get("/projects");
       setProjects(data);
-    } catch (error) {
-      toast.error("Failed to load projects");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to load projects");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/projects/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) {
-        toast.error("Remove from featured section");
-        return;
-      }
-
+      await api.delete(`/projects/${id}`);
       toast.success("Project deleted successfully");
       setProjects(projects.filter((p) => p._id !== id));
-    } catch (error) {
-      toast.error("Failed to delete project");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to delete project");
     }
     setDeleteProjectId(null);
   };
@@ -59,35 +47,24 @@ function Projects() {
   const handleSave = async (project: Project) => {
     try {
       const isNew = !project._id;
-      const response = await fetch(
-        isNew ? "/api/projects" : `/api/projects/${project._id}`,
-        {
-          method: isNew ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(project),
-        }
+      const { data } = await api[isNew ? "post" : "put"](
+        isNew ? "/projects" : `/projects/${project._id}`,
+        project
       );
 
-      if (!response.ok) throw new Error("Failed to save project");
-
-      const savedProject = await response.json();
-
       if (isNew) {
-        setProjects((prevProjects) => [savedProject, ...prevProjects]);
+        setProjects((prevProjects) => [data, ...prevProjects]);
         setNewProject(false);
         await fetchProjects();
       } else {
         setProjects((prevProjects) =>
-          prevProjects.map((p) =>
-            p._id === savedProject._id ? savedProject : p
-          )
+          prevProjects.map((p) => (p._id === data._id ? data : p))
         );
       }
 
       toast.success(`Project ${isNew ? "created" : "updated"} successfully`);
-    } catch (error) {
-      toast.error("Failed to save project");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to save project");
     }
   };
 

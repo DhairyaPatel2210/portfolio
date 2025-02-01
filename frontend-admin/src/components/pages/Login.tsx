@@ -5,38 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "@/lib/store/features/authSlice";
+import api from "@/lib/axios";
 
 function Login() {
   const navigate = useNavigate();
-  const [isChecking, setIsChecking] = useState(true);
+  const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/users/check-auth", {
-          credentials: "include",
-        });
-        if (response.ok) {
-          navigate("/dashboard", { replace: true });
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to check authentication status",
-        });
-      } finally {
-        setIsChecking(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
 
   const formik = useFormik({
     initialValues: {
@@ -47,20 +26,10 @@ function Login() {
     onSubmit: async (values) => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/users/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(values),
-          credentials: "include",
-        });
+        const { data } = await api.post("/users/login", values);
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Login failed");
-        }
+        // Store token only in Redux
+        dispatch(setCredentials({ user: data.user, token: data.token }));
 
         toast({
           title: "Success",
@@ -68,27 +37,18 @@ function Login() {
         });
 
         navigate("/dashboard", { replace: true });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Login error:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description:
-            error instanceof Error ? error.message : "Failed to login",
+          description: error.response?.data?.message || "Failed to login",
         });
       } finally {
         setIsLoading(false);
       }
     },
   });
-
-  if (isChecking) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="text-muted-foreground">Checking authentication...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center">

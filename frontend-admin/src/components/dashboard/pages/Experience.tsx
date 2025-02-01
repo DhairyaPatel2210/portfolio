@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import rehypeSanitize from "rehype-sanitize";
+import api from "@/lib/axios";
 
 function ExperiencePage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -48,11 +49,7 @@ function ExperiencePage() {
   const fetchExperiences = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/experiences", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch experiences");
-      const data = await response.json();
+      const { data } = await api.get("/experiences");
       console.log("Fetched experiences:", data);
       setExperiences(data || []);
     } catch (error) {
@@ -64,12 +61,7 @@ function ExperiencePage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/experiences/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to delete experience");
-
+      await api.delete(`/experiences/${id}`);
       setExperiences(experiences.filter((exp) => exp._id !== id));
       toast.success("Experience deleted successfully");
     } catch (error) {
@@ -91,21 +83,14 @@ function ExperiencePage() {
   const handleFormSubmit = async (values: Experience, { resetForm }: any) => {
     try {
       const isNew = !values._id;
-      const response = await fetch(
-        isNew ? "/api/experiences" : `/api/experiences/${values._id}`,
-        {
-          method: isNew ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(values),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to save experience");
-      const savedExperience = await response.json();
+      const { data } = await api({
+        method: isNew ? "POST" : "PUT",
+        url: isNew ? "/experiences" : `/experiences/${values._id}`,
+        data: values,
+      });
 
       // Extract the experience data from the response
-      const experienceData = savedExperience.experience || savedExperience;
+      const experienceData = data.experience || data;
 
       if (isNew) {
         setExperiences([experienceData, ...experiences]);

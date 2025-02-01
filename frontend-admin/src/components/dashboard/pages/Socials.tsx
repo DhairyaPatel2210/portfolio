@@ -5,7 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
-import { Social } from "@/lib/types/social";
+import {
+  Social,
+  UpdateSocialInput,
+  CreateSocialInput,
+  IconData,
+} from "@/lib/types/social";
 import { socialSchema } from "@/lib/validations/social";
 import { toast } from "sonner";
 import {
@@ -18,6 +23,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import api from "@/lib/axios";
+
+interface FormValues {
+  name: string;
+  link: string;
+  lightIcon: string;
+  darkIcon: string;
+}
 
 const Socials = () => {
   const [socials, setSocials] = useState<Social[]>([]);
@@ -35,64 +48,43 @@ const Socials = () => {
 
   const fetchSocials = async () => {
     try {
-      const response = await fetch("/api/socials");
-      const data = await response.json();
+      const { data } = await api.get("/socials");
       setSocials(data);
-    } catch (error) {
-      toast.error("Failed to fetch socials");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to fetch socials");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = async (values: Omit<Social, "_id">) => {
+  const handleCreate = async (values: CreateSocialInput) => {
     try {
-      const response = await fetch("/api/socials", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-      const data = await response.json();
+      const { data } = await api.post("/socials", values);
       setSocials([...socials, data]);
       setShowNewForm(false);
       toast.success("Social added successfully");
-    } catch (error) {
-      toast.error("Failed to create social");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to create social");
     }
   };
 
-  const handleUpdate = async (id: string, values: Partial<Social>) => {
+  const handleUpdate = async (id: string, values: UpdateSocialInput) => {
     try {
-      const response = await fetch(`/api/socials/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-      const data = await response.json();
+      const { data } = await api.put(`/socials/${id}`, values);
       setSocials(socials.map((social) => (social._id === id ? data : social)));
       toast.success("Social updated successfully");
-    } catch (error) {
-      toast.error("Failed to update social");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update social");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/socials/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        toast.error("Remove from featured section");
-        return;
-      }
+      await api.delete(`/socials/${id}`);
       setSocials(socials.filter((social) => social._id !== id));
       toast.success("Social deleted successfully");
-    } catch (error) {
-      toast.error("Failed to delete social");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to delete social");
     } finally {
       setDeleteDialog({ isOpen: false });
     }
@@ -100,8 +92,8 @@ const Socials = () => {
 
   const handleImageUpload = async (file: File) => {
     // Validate file type
-    if (file.type !== "image/png") {
-      throw new Error("Only PNG images are allowed");
+    if (file.type !== "image/svg+xml") {
+      throw new Error("Only SVG images are allowed");
     }
 
     const reader = new FileReader();
@@ -120,10 +112,11 @@ const Socials = () => {
     social?: Social;
     isNew?: boolean;
   }) => {
-    const initialValues = {
+    const initialValues: FormValues = {
       name: social?.name || "",
       link: social?.link || "",
-      icon: "",
+      lightIcon: "",
+      darkIcon: "",
     };
 
     return (
@@ -144,24 +137,41 @@ const Socials = () => {
             <X className="h-4 w-4" />
           </Button>
         )}
-        <Formik
+        <Formik<FormValues>
           initialValues={initialValues}
           validationSchema={socialSchema}
           enableReinitialize
           onSubmit={async (values) => {
-            const submitValues = {
-              name: values.name,
-              link: values.link,
-              icon: values.icon || "",
-            };
-
+            // For new social creation
             if (isNew) {
-              await handleCreate(submitValues);
-            } else if (social?._id) {
-              const updateValues = {
-                ...submitValues,
-                icon: values.icon || undefined,
+              if (!values.lightIcon || !values.darkIcon) {
+                toast.error("Both light and dark theme icons are required");
+                return;
+              }
+              // The backend will handle converting the base64 strings to S3 objects
+              await handleCreate({
+                name: values.name,
+                link: values.link,
+                lightIcon: values.lightIcon,
+                darkIcon: values.darkIcon,
+              } as unknown as CreateSocialInput);
+            }
+            // For updating existing social
+            else if (social?._id) {
+              const updateValues: UpdateSocialInput = {
+                name: values.name,
+                link: values.link,
               };
+
+              // Only include icons in update if they've changed
+              if (values.lightIcon) {
+                updateValues.lightIcon =
+                  values.lightIcon as unknown as IconData;
+              }
+              if (values.darkIcon) {
+                updateValues.darkIcon = values.darkIcon as unknown as IconData;
+              }
+
               await handleUpdate(social._id, updateValues);
             }
           }}
@@ -194,50 +204,103 @@ const Socials = () => {
                 )}
               </div>
 
-              <div>
-                <Label htmlFor="icon">Icon (PNG only)</Label>
-                <Input
-                  id="icon"
-                  type="file"
-                  accept="image/png"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const base64 = await handleImageUpload(file);
-                        setFieldValue("icon", base64);
-                      } catch (error) {
-                        if (error instanceof Error) {
-                          toast.error(error.message);
+              <div className="space-y-4">
+                {/* Light Theme Icon */}
+                <div>
+                  <Label htmlFor="lightIcon">Light Theme Icon (SVG only)</Label>
+                  <Input
+                    id="lightIcon"
+                    type="file"
+                    accept="image/svg+xml"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const base64 = await handleImageUpload(file);
+                          setFieldValue("lightIcon", base64);
+                        } catch (error) {
+                          if (error instanceof Error) {
+                            toast.error(error.message);
+                          }
+                          e.target.value = ""; // Reset file input
                         }
-                        e.target.value = ""; // Reset file input
                       }
-                    }
-                  }}
-                />
-                {(values.icon || social?.s3Link) && (
-                  <div className="mt-2 relative w-16 h-16">
-                    <img
-                      src={values.icon || social?.s3Link}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded"
-                    />
-                    {values.icon && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute -top-2 -right-2"
-                        onClick={() => setFieldValue("icon", "")}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-                {errors.icon && touched.icon && (
-                  <p className="text-sm text-red-500">{errors.icon}</p>
-                )}
+                    }}
+                  />
+                  {(values.lightIcon || social?.lightIcon?.s3Link) && (
+                    <div className="mt-2 relative w-16 h-16 bg-white rounded">
+                      <img
+                        src={values.lightIcon || social?.lightIcon?.s3Link}
+                        alt={`${values.name || social?.name} light theme icon`}
+                        className="w-full h-full object-contain rounded"
+                      />
+                      {values.lightIcon && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute -top-2 -right-2"
+                          onClick={() => setFieldValue("lightIcon", "")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {errors.lightIcon && touched.lightIcon && (
+                    <p className="text-sm text-red-500">{errors.lightIcon}</p>
+                  )}
+                </div>
+
+                {/* Dark Theme Icon */}
+                <div>
+                  <Label htmlFor="darkIcon">Dark Theme Icon (SVG only)</Label>
+                  <Input
+                    id="darkIcon"
+                    type="file"
+                    accept="image/svg+xml"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const base64 = await handleImageUpload(file);
+                          setFieldValue("darkIcon", base64);
+                        } catch (error) {
+                          if (error instanceof Error) {
+                            toast.error(error.message);
+                          }
+                          e.target.value = ""; // Reset file input
+                        }
+                      }
+                    }}
+                  />
+                  {(values.darkIcon || social?.darkIcon?.s3Link) && (
+                    <div className="mt-2 relative w-16 h-16 bg-gray-900 rounded">
+                      <img
+                        src={values.darkIcon || social?.darkIcon?.s3Link}
+                        alt={`${values.name || social?.name} dark theme icon`}
+                        className="w-full h-full object-contain rounded"
+                      />
+                      {values.darkIcon && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute -top-2 -right-2"
+                          onClick={() => setFieldValue("darkIcon", "")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Please upload SVG icons for best quality and scalability
+                  </p>
+                  {errors.darkIcon && touched.darkIcon && (
+                    <p className="text-sm text-red-500">{errors.darkIcon}</p>
+                  )}
+                </div>
               </div>
 
               <Button type="submit">

@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import api from "@/lib/axios";
 
 const ResumeCard = ({
   resume,
@@ -185,16 +186,7 @@ export default function Resumes() {
 
   const fetchResumes = async () => {
     try {
-      const response = await fetch("/api/resumes/", {
-        method: "GET",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: ResumeResponse = await response.json();
+      const { data } = await api.get("/resumes/");
       const sortedResumes = [...data.resumes].sort(
         (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -240,76 +232,27 @@ export default function Resumes() {
         reader.readAsDataURL(file);
       });
 
-      let response: Response;
+      let response;
 
       if (existingResume) {
-        response = await fetch(`/api/resumes/${existingResume._id}`, {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            file: base64Data,
-            fileName: file.name,
-            displayName: displayName,
-            _id: existingResume._id,
-          }),
+        response = await api.put(`/resumes/${existingResume._id}`, {
+          displayName,
+          file: base64Data,
         });
       } else {
-        response = await fetch("/api/resumes", {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            file: base64Data,
-            fileName: file.name,
-            displayName: displayName,
-            index: index,
-          }),
+        response = await api.post("/resumes/", {
+          displayName,
+          file: base64Data,
         });
       }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const responseData: UploadResumeResponse = await response.json();
-
-      if (response.status === 201 || response.status === 200) {
-        // Fetch updated resume list
-        const updatedResponse = await fetch("/api/resumes/", {
-          method: "GET",
-          credentials: "include",
-        });
-
-        if (!updatedResponse.ok) {
-          throw new Error(
-            `Failed to fetch updated resumes: ${updatedResponse.status}`
-          );
-        }
-
-        const updatedData: ResumeResponse = await updatedResponse.json();
-        const sortedResumes = [...updatedData.resumes].sort(
-          (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-
-        setResumes(sortedResumes);
-        toast.success(responseData.message || "Resume operation successful");
-      } else {
-        throw new Error(
-          responseData.message ||
-            `Unexpected response status: ${response.status}`
-        );
-      }
+      const data = response.data;
+      const updatedResumes = [...resumes];
+      updatedResumes[index] = data.resume;
+      setResumes(updatedResumes);
+      toast.success("Resume uploaded successfully");
     } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(
-        existingResume ? "Failed to update resume" : "Failed to upload resume"
-      );
+      toast.error("Failed to upload resume");
     } finally {
       setUploadingIds((prev) => {
         const newSet = new Set(prev);
@@ -327,21 +270,12 @@ export default function Resumes() {
     if (!deleteConfirm.resumeId) return;
 
     try {
-      const response = await fetch(`/api/resumes/${deleteConfirm.resumeId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      setResumes((prev) =>
-        prev.filter((r) => r._id !== deleteConfirm.resumeId)
+      await api.delete(`/resumes/${deleteConfirm.resumeId}`);
+      setResumes(
+        resumes.filter((resume) => resume._id !== deleteConfirm.resumeId)
       );
       toast.success("Resume deleted successfully");
     } catch (error) {
-      console.error("Delete error:", error);
       toast.error("Failed to delete resume");
     } finally {
       setDeleteConfirm({ show: false });

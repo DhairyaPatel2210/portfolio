@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import api from "@/lib/axios";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,10 +22,12 @@ const AboutMe = () => {
   useEffect(() => {
     const fetchAbout = async () => {
       try {
-        const response = await axios.get("/api/users/about");
+        const response = await api.get("/users/about");
         setValue(response.data.about);
-      } catch (error) {
-        setError("Failed to fetch about content");
+      } catch (error: any) {
+        setError(
+          error.response?.data?.message || "Failed to fetch about content"
+        );
       }
     };
     fetchAbout();
@@ -34,12 +36,14 @@ const AboutMe = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.put("/api/users/about", {
+      await api.put("/users/about", {
         about: value,
       });
       setSuccess("About content updated successfully");
-    } catch (error) {
-      setError("Failed to update about content");
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message || "Failed to update about content"
+      );
     }
     setLoading(false);
   };

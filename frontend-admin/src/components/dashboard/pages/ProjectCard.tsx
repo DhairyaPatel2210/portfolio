@@ -94,10 +94,13 @@ function ProjectCard({
   };
 
   const addLanguage = () => {
-    if (newLanguage && !formData.programmingLanguages.includes(newLanguage)) {
+    if (newLanguage && !formData.programmingLanguages?.includes(newLanguage)) {
       setFormData({
         ...formData,
-        programmingLanguages: [...formData.programmingLanguages, newLanguage],
+        programmingLanguages: [
+          ...(formData.programmingLanguages || []),
+          newLanguage,
+        ],
       });
       setNewLanguage("");
     }
@@ -106,7 +109,7 @@ function ProjectCard({
   const removeLanguage = (lang: string) => {
     setFormData({
       ...formData,
-      programmingLanguages: formData.programmingLanguages.filter(
+      programmingLanguages: (formData.programmingLanguages || []).filter(
         (l) => l !== lang
       ),
     });
@@ -114,17 +117,17 @@ function ProjectCard({
 
   const addProjectType = () => {
     const type = newProjectType.trim();
-    if (type && !formData.projectType.includes(type)) {
+    if (type && !formData.projectType?.includes(type)) {
       setFormData((prev) => ({
         ...prev,
-        projectType: [...prev.projectType, type],
+        projectType: [...(prev.projectType || []), type],
       }));
       setNewProjectType("");
       toast({
         title: "Success",
         description: `Added project type: ${type}`,
       });
-    } else if (formData.projectType.includes(type)) {
+    } else if (formData.projectType?.includes(type)) {
       toast({
         title: "Error",
         description: "This project type already exists",
@@ -136,7 +139,7 @@ function ProjectCard({
   const removeProjectType = (type: string) => {
     setFormData({
       ...formData,
-      projectType: formData.projectType.filter((t) => t !== type),
+      projectType: (formData.projectType || []).filter((t) => t !== type),
     });
     toast({
       description: `Removed project type: ${type}`,
@@ -201,7 +204,7 @@ function ProjectCard({
             <div className="space-y-2">
               <Label>Project Type*</Label>
               <div className="flex gap-2 flex-wrap mb-2">
-                {formData.projectType.map((type) => (
+                {(formData.projectType || []).map((type) => (
                   <Badge
                     key={type}
                     variant="secondary"

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import axios from "@/lib/axios";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,7 @@ const Status = () => {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await axios.get("/api/users/status");
+        const response = await axios.get("/users/status");
         setValue(response.data.status);
       } catch (error) {
         setError("Failed to fetch status content");
@@ -34,7 +34,7 @@ const Status = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.put("/api/users/status", {
+      await axios.put("/users/status", {
         status: value,
       });
       setSuccess("Status updated successfully");

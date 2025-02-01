@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import api from "@/lib/axios";
 
 const initialValues: SEO = {
   title: "",
@@ -33,12 +34,7 @@ function SEOPage() {
   const fetchSEO = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/users/seo", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch SEO data");
-      const data: SEOResponse = await response.json();
-
+      const { data } = await api.get("/users/seo");
       setSeoData(data);
       if (data) {
         formik.setValues({
@@ -93,21 +89,13 @@ function SEOPage() {
         payload.image = values.image;
       }
 
-      const response = await fetch("/api/users/seo", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to save SEO data");
-      const savedData = await response.json();
-      setSeoData(savedData);
+      const { data } = await api.put("/users/seo", payload);
+      setSeoData(data);
 
       // Update image states after successful save
-      if (savedData.seo.image?.s3Url) {
-        setExistingImageUrl(savedData.seo.image.s3Url);
-        setImagePreview(savedData.seo.image.s3Url);
+      if (data.seo.image?.s3Url) {
+        setExistingImageUrl(data.seo.image.s3Url);
+        setImagePreview(data.seo.image.s3Url);
         formik.setFieldValue("image", "");
       } else {
         setExistingImageUrl(null);

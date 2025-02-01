@@ -1,6 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Link, Outlet, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logout } from "@/lib/store/features/authSlice";
+import api from "@/lib/axios";
+import { useToast } from "@/components/ui/use-toast";
 
 const sidebarItems = [
   { name: "Home", path: "/dashboard/home" },
@@ -18,21 +22,27 @@ const sidebarItems = [
 
 function Dashboard() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { toast } = useToast();
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("/api/users/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      await api.post("/users/logout");
 
-      if (!response.ok) {
-        throw new Error("Logout failed");
-      }
+      // Clear token from localStorage
+      localStorage.removeItem("token");
+
+      // Dispatch logout action
+      dispatch(logout());
 
       navigate("/login");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Logout error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.message || "Failed to logout",
+      });
     }
   };
 

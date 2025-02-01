@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import api from "@/lib/axios";
 
 interface Analytics {
   googleAnalyticsId: string;
@@ -20,19 +21,13 @@ export default function Analytics() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch("/api/users/analytics", {
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const { data } = await api.get("/users/analytics");
         setAnalytics(data.analytics);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching analytics:", error);
-        toast.error("Failed to fetch analytics settings");
+        toast.error(
+          error.response?.data?.message || "Failed to fetch analytics settings"
+        );
       } finally {
         setLoading(false);
       }
@@ -46,27 +41,17 @@ export default function Analytics() {
     setSaving(true);
 
     try {
-      const response = await fetch("/api/users/analytics", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          googleAnalyticsId: analytics.googleAnalyticsId,
-        }),
+      const { data } = await api.put("/users/analytics", {
+        googleAnalyticsId: analytics.googleAnalyticsId,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
       setAnalytics(data.analytics);
       toast.success("Analytics settings saved successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving analytics:", error);
-      toast.error("Failed to save analytics settings");
+      toast.error(
+        error.response?.data?.message || "Failed to save analytics settings"
+      );
     } finally {
       setSaving(false);
     }

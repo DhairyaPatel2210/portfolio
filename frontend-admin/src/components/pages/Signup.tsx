@@ -5,38 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "@/lib/store/features/authSlice";
+import api from "@/lib/axios";
 
 function Signup() {
   const navigate = useNavigate();
-  const [isChecking, setIsChecking] = useState(true);
+  const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/users/check-auth", {
-          credentials: "include",
-        });
-        if (response.ok) {
-          navigate("/dashboard", { replace: true });
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to check authentication status",
-        });
-      } finally {
-        setIsChecking(false);
-      }
-    };
-
-    checkAuth();
-  }, [navigate, toast]);
 
   const formik = useFormik({
     initialValues: {
@@ -44,25 +23,17 @@ function Signup() {
       lastName: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
     validationSchema: signupSchema,
     onSubmit: async (values) => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/users/signup", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(values),
-          credentials: "include",
-        });
+        const { data } = await api.post("/users/signup", values);
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Signup failed");
-        }
+        // Store token in localStorage and Redux
+        localStorage.setItem("token", data.token);
+        dispatch(setCredentials({ user: data.user, token: data.token }));
 
         toast({
           title: "Success",
@@ -70,27 +41,19 @@ function Signup() {
         });
 
         navigate("/dashboard", { replace: true });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Signup error:", error);
         toast({
           variant: "destructive",
           title: "Error",
           description:
-            error instanceof Error ? error.message : "Failed to create account",
+            error.response?.data?.message || "Failed to create account",
         });
       } finally {
         setIsLoading(false);
       }
     },
   });
-
-  if (isChecking) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="text-muted-foreground">Checking authentication...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
@@ -104,6 +67,7 @@ function Signup() {
               <Label htmlFor="firstName">First Name</Label>
               <Input
                 id="firstName"
+                type="text"
                 disabled={isLoading}
                 {...formik.getFieldProps("firstName")}
               />
@@ -118,6 +82,7 @@ function Signup() {
               <Label htmlFor="lastName">Last Name</Label>
               <Input
                 id="lastName"
+                type="text"
                 disabled={isLoading}
                 {...formik.getFieldProps("lastName")}
               />
@@ -150,6 +115,22 @@ function Signup() {
               {formik.touched.password && formik.errors.password && (
                 <p className="text-sm text-red-500">{formik.errors.password}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                disabled={isLoading}
+                {...formik.getFieldProps("confirmPassword")}
+              />
+              {formik.touched.confirmPassword &&
+                formik.errors.confirmPassword && (
+                  <p className="text-sm text-red-500">
+                    {formik.errors.confirmPassword}
+                  </p>
+                )}
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
