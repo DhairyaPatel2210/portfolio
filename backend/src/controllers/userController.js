@@ -16,6 +16,9 @@ router.post("/signup", async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
+    const origin = req.get("origin") || req.get("referer") || "";
+    const domain = new URL(origin).hostname;
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -38,7 +41,7 @@ router.post("/signup", async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: newUser._id, email: newUser.email },
+      { userId: newUser._id, email: newUser.email, domain: domain },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
     );
@@ -78,9 +81,12 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    const origin = req.get("origin") || req.get("referer") || "";
+    const domain = new URL(origin).hostname;
+
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user._id, email: user.email, domain: domain },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
     );
@@ -112,9 +118,6 @@ router.get("/check-auth", authenticateToken, (req, res) => {
 
 // Logout route
 router.post("/logout", (req, res) => {
-  const origin = req.get("origin") || req.get("referer") || "";
-  const domain = new URL(origin).hostname;
-
   res.clearCookie("jwt", {
     path: "/",
   });
@@ -322,11 +325,14 @@ router.post("/auth/api-key", async (req, res) => {
         user.rsaKeys.privateKey
       );
 
+      const origin = req.get("origin") || req.get("referer") || "";
+      const domain = new URL(origin).hostname;
+
       // Compare with stored API key
       if (decryptedApiKey === user.apiKey) {
         // Generate JWT token
         const token = jwt.sign(
-          { userId: user._id, email: user.email },
+          { userId: user._id, email: user.email, domain: domain },
           process.env.JWT_SECRET,
           { expiresIn: "24h" }
         );
