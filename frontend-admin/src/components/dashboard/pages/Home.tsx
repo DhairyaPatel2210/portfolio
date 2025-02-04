@@ -18,6 +18,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import api from "@/lib/axios";
+import { Origin, OriginFormValues } from "@/lib/types/origin";
+import { Formik, Form, Field } from "formik";
+import * as Yup from "yup";
 
 interface Contact {
   location: string;
@@ -25,6 +28,16 @@ interface Contact {
   fromEmail: string;
   sendGridApiKey: string;
 }
+
+const originValidationSchema = Yup.object().shape({
+  origin: Yup.string()
+    .matches(
+      /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(:\d+)?$/,
+      "Invalid origin format. Example: http://localhost:3000 or https://example.com"
+    )
+    .required("Origin is required"),
+  description: Yup.string().required("Description is required"),
+});
 
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -50,6 +63,10 @@ export default function Home() {
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [hasGeneratedKey, setHasGeneratedKey] = useState(false);
   const [showKeyWarning, setShowKeyWarning] = useState(false);
+  const [origins, setOrigins] = useState<Origin[]>([]);
+  const [isLoadingOrigins, setIsLoadingOrigins] = useState(false);
+  const [isAddingOrigin, setIsAddingOrigin] = useState(false);
+  const [isDeletingOrigin, setIsDeletingOrigin] = useState<string | null>(null);
 
   // Initial data fetch
   useEffect(() => {
@@ -63,6 +80,7 @@ export default function Home() {
           featuredProjectsData,
           featuredSocialsData,
           contactData,
+          originsData,
         ] = await Promise.all([
           fetchProjects(),
           fetchSocials(),
@@ -70,6 +88,7 @@ export default function Home() {
           fetchFeaturedProjects(),
           fetchFeaturedSocials(),
           fetchContact(),
+          fetchOrigins(),
         ]);
 
         setProjects(projectsData);
@@ -85,6 +104,7 @@ export default function Home() {
             sendGridApiKey: contactData.sendGridApiKey || "",
           });
         }
+        setOrigins(originsData);
       } catch (error: any) {
         console.error("Error fetching initial data:", error);
         toast({
@@ -398,6 +418,60 @@ export default function Home() {
   const filteredSocials = socials.filter((social) =>
     social.name.toLowerCase().includes(socialSearch.toLowerCase())
   );
+
+  const fetchOrigins = async () => {
+    try {
+      const { data } = await api.get("/origins");
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      console.error("Error fetching origins:", error);
+      throw error;
+    }
+  };
+
+  const handleAddOrigin = async (
+    values: OriginFormValues,
+    { resetForm }: any
+  ) => {
+    setIsAddingOrigin(true);
+    try {
+      const { data } = await api.post("/origins", values);
+      setOrigins([...origins, data]);
+      resetForm();
+      toast({
+        title: "Success",
+        description: "Origin added successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to add origin",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingOrigin(false);
+    }
+  };
+
+  const handleDeleteOrigin = async (id: string) => {
+    setIsDeletingOrigin(id);
+    try {
+      await api.delete(`/origins/${id}`);
+      setOrigins(origins.filter((origin) => origin._id !== id));
+      toast({
+        title: "Success",
+        description: "Origin deleted successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete origin",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingOrigin(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -770,6 +844,125 @@ export default function Home() {
                     All systems using the old key will need to be updated.
                   </p>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* CORS Origins Management Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>CORS Origins Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <Formik
+                  initialValues={{
+                    origin: "",
+                    description: "",
+                  }}
+                  validationSchema={originValidationSchema}
+                  onSubmit={handleAddOrigin}
+                >
+                  {({ errors, touched }) => (
+                    <Form className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="origin">Origin URL</Label>
+                        <Field
+                          as={Input}
+                          id="origin"
+                          name="origin"
+                          placeholder="https://example.com"
+                          className={
+                            errors.origin && touched.origin
+                              ? "border-red-500"
+                              : ""
+                          }
+                        />
+                        {errors.origin && touched.origin && (
+                          <p className="text-sm text-red-500">
+                            {errors.origin}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Field
+                          as={Input}
+                          id="description"
+                          name="description"
+                          placeholder="Frontend application"
+                          className={
+                            errors.description && touched.description
+                              ? "border-red-500"
+                              : ""
+                          }
+                        />
+                        {errors.description && touched.description && (
+                          <p className="text-sm text-red-500">
+                            {errors.description}
+                          </p>
+                        )}
+                      </div>
+                      <Button type="submit" disabled={isAddingOrigin}>
+                        {isAddingOrigin ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Adding...
+                          </>
+                        ) : (
+                          "Add Origin"
+                        )}
+                      </Button>
+                    </Form>
+                  )}
+                </Formik>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Allowed Origins
+                  </h3>
+                  {origins.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No origins added yet
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Origin</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {origins.map((origin) => (
+                          <TableRow key={origin._id}>
+                            <TableCell className="font-mono">
+                              {origin.origin}
+                            </TableCell>
+                            <TableCell>{origin.description}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                  origin._id && handleDeleteOrigin(origin._id)
+                                }
+                                disabled={isDeletingOrigin === origin._id}
+                              >
+                                {isDeletingOrigin === origin._id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  "Delete"
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

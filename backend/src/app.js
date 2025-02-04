@@ -6,6 +6,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
+const Origin = require("./models/Origin");
 
 // Load environment variables
 dotenv.config();
@@ -16,10 +17,31 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-const allowedOrigins =
-  process.env.NODE_ENV === "production"
-    ? ["https://dhairya.shareitineary.live", "https://shareitineary.live"]
-    : ["http://localhost:5173"];
+// CORS configuration
+const corsOptions = {
+  origin: async function (origin, callback) {
+    try {
+      // Get all allowed origins from the database
+      const origins = await Origin.find({}).select("origin");
+      const allowedOrigins = origins.map((o) => o.origin);
+
+      // Add default origins based on environment
+      if (process.env.NODE_ENV === "production") {
+        allowedOrigins.push(
+          "https://dhairya.shareitineary.live",
+          "https://shareitineary.live"
+        );
+      } else {
+        allowedOrigins.push("http://localhost:5173");
+      }
+
+      callback(null, allowedOrigins);
+    } catch (error) {
+      callback(error);
+    }
+  },
+  credentials: true,
+};
 
 // Middleware
 app.use(express.json({ limit: "5mb" }));
@@ -27,12 +49,7 @@ app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 app.use(cookieParser());
 app.use(helmet());
 app.use(morgan("dev"));
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 
 // Rate limiting
 // const limiter = rateLimit({
@@ -65,6 +82,9 @@ app.use("/api/portfolio", portfolioRoutes);
 
 const contactRoutes = require("./controllers/contactController");
 app.use("/api/contact", contactRoutes);
+
+const originRoutes = require("./controllers/originsController");
+app.use("/api/origins", originRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
