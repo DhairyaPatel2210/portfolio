@@ -6,7 +6,7 @@ const authenticateToken = require("../middleware/authorization");
 // Get all origins for a user (requires auth)
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const origins = await Origin.find({ user: req.user._id });
+    const origins = await Origin.find({ user: req.user.userId });
     res.json(origins);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -31,7 +31,7 @@ router.post("/", authenticateToken, async (req, res) => {
     const newOrigin = new Origin({
       origin,
       description,
-      user: req.user._id,
+      user: req.user.userId,
     });
     const savedOrigin = await newOrigin.save();
     res.status(201).json(savedOrigin);
@@ -49,7 +49,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     const origin = await Origin.findOne({
       _id: req.params.id,
-      user: req.user._id,
+      user: req.user.userId,
     });
 
     if (!origin) {
