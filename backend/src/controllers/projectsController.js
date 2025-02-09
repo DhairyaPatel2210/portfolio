@@ -71,7 +71,10 @@ router.put("/:id", authenticateToken, async (req, res) => {
     const updateData = req.body;
 
     // Handle image update if new image is provided
-    if (updateData.iconImage) {
+    if (
+      updateData.iconImage &&
+      !updateData.iconImage.includes("amazonaws.com")
+    ) {
       // Delete old image if exists
       if (project.s3Key) {
         await deleteFromS3(project.s3Key);
