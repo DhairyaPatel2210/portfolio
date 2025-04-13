@@ -32,7 +32,7 @@ interface Contact {
 const originValidationSchema = Yup.object().shape({
   origin: Yup.string()
     .matches(
-      /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(:\d+)?$/,
+      /^(https?:\/\/)?(localhost|([a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+))(\:[0-9]+)?(\/[a-zA-Z0-9-._~:\?#[\]@!$&'()*+,;=]*)?$/,
       "Invalid origin format. Example: http://localhost:3000 or https://example.com"
     )
     .required("Origin is required"),
