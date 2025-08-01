@@ -7,13 +7,15 @@ const router = express.Router();
 // Upload single resume
 router.post("/", authenticateToken, async (req, res) => {
   try {
-    const { file, fileName, displayName } = req.body;
+    const { file, displayName } = req.body;
 
-    if (!file || !fileName || !displayName) {
+    if (!file || !displayName) {
       return res.status(400).json({
         message: "File data, filename, and display name are required",
       });
     }
+
+    const fileName = displayName.replaceAll(" ", "_").toLowerCase();
 
     const s3Response = await uploadBase64ToS3(file, fileName);
 
@@ -52,7 +54,9 @@ router.get("/", authenticateToken, async (req, res) => {
 router.put("/:id", authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
-    const { file, fileName, displayName } = req.body;
+    const { file, displayName } = req.body;
+
+    const fileName = displayName.replaceAll(" ", "_").toLowerCase();
 
     const existingResume = await Resume.findOne({
       _id: id,
